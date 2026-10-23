@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0c0d0e">
+<title>USOS Checker — Cyan + Centered Hero (combined)</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0c0d0e;
+    --text: #eef1f3;
+    --muted: #8b9297;
+    --quiet: #5c6368;
+    --line: rgba(255,255,255,.09);
+    --accent: #1fc6ef; /* the only accent; used on Next class only */
+    --paper: #f4f5f6;
+    --ink: #0c0d0e;
+    --radius: 6px;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0; min-height: 100vh; color: var(--text); font-size: 13px; line-height: 1.45;
+    background: radial-gradient(120% 80% at 50% 0%, #1d1e20 0%, var(--bg) 60%);
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  .wrap { width: min(100% - 32px, 760px); margin: 0 auto; padding: 28px 0 96px; }
+  .grid { display: grid; gap: 18px; grid-template-columns: 1fr; }
+  @media (min-width: 640px) {
+    .grid { grid-template-columns: 1.15fr 1fr; gap: 24px; align-items: start; }
+    .hero { grid-row: span 2; min-height: 100%; }
+    .grid > .week { grid-column: 1 / -1; }
+  }
+
+  .label { font-size: 9px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); }
+  .meta { font-size: 11px; letter-spacing: .06em; color: var(--muted); }
+  .num { font-variant-numeric: tabular-nums; }
+  .hair { height: 1px; background: var(--line); margin: 14px 0; }
+  .center { text-align: center; }
+
+  .card {
+    position: relative; display: block; width: 100%; padding: 22px; border-radius: var(--radius);
+    background: linear-gradient(160deg, #19191b, #101112); border: 1px solid var(--line);
+    box-shadow: 0 22px 40px -18px rgba(0,0,0,.9); transition: transform .18s ease;
+  }
+  button.card:hover { transform: translateY(-2px); }
+
+  /* 1. Hero: next class centered (from the particles prototype), rest of today as a quiet footer */
+  .hero { display: flex; flex-direction: column; min-height: 380px; text-align: center; }
+  .hero-main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px 0; transition: transform .18s ease; }
+  button.hero:hover .hero-main { transform: translateY(-2px); }
+  .accent-bar { width: 28px; height: 2px; background: var(--accent); margin-bottom: 14px; }
+  .hero-title { font-size: 30px; font-weight: 600; letter-spacing: -.015em; line-height: 1.12; margin: 8px 0 0; }
+  .hero-time { margin-top: 10px; font-size: 13px; letter-spacing: .04em; }
+  .hero-room { color: var(--muted); }
+
+  /* Later today: two equal columns split by a hairline; time leads, then name, then room */
+  .hero-foot { padding-top: 16px; border-top: 1px solid var(--line); }
+  .hero-foot .label { margin-bottom: 12px; }
+  .later-list { display: grid; grid-template-columns: 1fr 1fr; }
+  .later-item { padding: 2px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .later-item + .later-item { border-left: 1px solid var(--line); }
+  .later-time { font-size: 11px; letter-spacing: .06em; color: var(--muted); }
+  .later-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .later-room { font-size: 11px; color: var(--quiet); }
+
+  /* 2. Attention: every change in one card, grades included */
+  .item { display: flex; align-items: baseline; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); }
+  .item:first-of-type { border-top: 0; padding-top: 14px; }
+  .mark { flex: none; width: 5px; height: 5px; border-radius: 50%; background: var(--text); transform: translateY(-2px); }
+  .item-main { flex: 1; min-width: 0; }
+  .item-title { font-size: 13px; font-weight: 600; }
+  .item-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .item-end { font-size: 15px; font-weight: 500; }
+  .more { margin-top: 6px; }
+
+  /* 3. Week: quiet overview, no class names (those live in the hero) */
+  .week { padding: 4px 2px 0; }
+  .week-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); border-top: 1px solid var(--line); }
+  .day { padding: 12px 0 4px; text-align: center; color: var(--muted); border-radius: 4px; }
+  .day:hover { color: var(--text); }
+  .day .dow { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+  .day .date { font-size: 15px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .day .dots { height: 6px; margin-top: 8px; display: flex; justify-content: center; gap: 3px; }
+  .dots i { width: 4px; height: 4px; border-radius: 50%; background: var(--quiet); }
+  .day.today { color: var(--text); box-shadow: 0 -1px 0 var(--text); }
+  .day.today .date { font-weight: 600; }
+  .day.today .dots i { background: var(--text); }
+
+  .nav {
+    position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
+    display: flex; gap: 4px; padding: 5px; border-radius: 999px;
+    background: rgba(20,21,22,.82); backdrop-filter: blur(10px); border: 1px solid var(--line);
+  }
+  .nav button { padding: 8px 14px; border-radius: 999px; font-size: 11px; color: var(--muted); letter-spacing: .04em; }
+  .nav button[aria-current="page"] { color: var(--ink); background: var(--paper); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 74px; transform: translateX(-50%); padding: 8px 14px; border-radius: 4px;
+    background: var(--paper); color: var(--ink); font-size: 11px; opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .toast.show { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="grid">
+
+    <!-- 1. The one thing that matters now: the nearest class + the rest of today -->
+    <button class="card hero" data-toast="Programming · Room 204" aria-label="Next class: Programming, 14:15 to 15:45, room 204">
+      <div class="hero-main">
+        <div class="accent-bar"></div>
+        <div class="label">Next class</div>
+        <div class="hero-title">Programming</div>
+        <div class="hero-time num">14:15–15:45</div>
+        <div class="hero-room num">Room 204</div>
+      </div>
+      <div class="hero-foot">
+        <div class="label">Later today</div>
+        <div class="later-list">
+          <div class="later-item"><span class="later-time num">16:00</span><span class="later-name">Mathematics</span><span class="later-room num">Room 108</span></div>
+          <div class="later-item"><span class="later-time num">18:00</span><span class="later-name">Physics lab</span><span class="later-room num">Room 12</span></div>
+        </div>
+      </div>
+    </button>
+
+    <!-- 2. Everything that changed, one card: timetable and grades together -->
+    <section class="card" aria-label="Needs attention">
+      <div class="label">Needs attention</div>
+      <button class="item" data-toast="Room changed · 204 → 108" style="width:100%">
+        <span class="mark"></span>
+        <span class="item-main"><div class="item-title">Room changed</div><div class="item-sub">Mathematics · 204 → 108</div></span>
+        <span class="meta">Today</span>
+      </button>
+      <button class="item" data-toast="Algorithms · 4.5" style="width:100%">
+        <span class="mark"></span>
+        <span class="item-main"><div class="item-title">New grade</div><div class="item-sub">Algorithms · Laboratory</div></span>
+        <span class="item-end num">4.5</span>
+      </button>
+      <button class="meta more" data-toast="All changes">All changes →</button>
+    </section>
+
+    <!-- 3. The week at a glance: dots only, class names stay in the hero -->
+    <section class="week" aria-label="This week">
+      <div class="week-head">
+        <span class="label">This week · 19–25 Oct</span>
+        <button class="meta" data-toast="Full plan">Full plan →</button>
+      </div>
+      <div class="days">
+        <button class="day"><div class="dow">Mon</div><div class="date">19</div><div class="dots"><i></i><i></i><i></i></div></button>
+        <button class="day"><div class="dow">Tue</div><div class="date">20</div><div class="dots"><i></i><i></i></div></button>
+        <button class="day"><div class="dow">Wed</div><div class="date">21</div><div class="dots"></div></button>
+        <button class="day"><div class="dow">Thu</div><div class="date">22</div><div class="dots"><i></i><i></i><i></i><i></i></div></button>
+        <button class="day today" aria-current="date"><div class="dow">Fri</div><div class="date">23</div><div class="dots"><i></i><i></i><i></i></div></button>
+        <button class="day"><div class="dow">Sat</div><div class="date">24</div><div class="dots"></div></button>
+        <button class="day"><div class="dow">Sun</div><div class="date">25</div><div class="dots"></div></button>
+      </div>
+    </section>
+
+  </div>
+  <p class="meta center" style="margin-top:28px;opacity:.5">Sample content · No USOS connection</p>
+</main>
+
+<nav class="nav" aria-label="Main navigation">
+  <button aria-current="page">Today</button>
+  <button data-toast="Plan">Plan</button>
+  <button data-toast="Grades">Grades</button>
+  <button data-toast="Changes">Changes</button>
+  <button data-toast="More">More</button>
+</nav>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+  const toast = document.getElementById('toast');
+  let timer;
+  document.addEventListener('click', e => {
+    const el = e.target.closest('[data-toast]');
+    if (!el) return;
+    toast.textContent = el.dataset.toast;
+    toast.classList.add('show');
+    clearTimeout(timer);
+    timer = setTimeout(() => toast.classList.remove('show'), 1400);
+  });
+</script>
+</body>
+</html>
