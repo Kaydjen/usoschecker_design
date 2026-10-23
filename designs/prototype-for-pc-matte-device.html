@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#131314">
+<title>USOS Checker — Today PC (Matte Device)</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #131314;
+    --text: #eef1f3;
+    --muted: #8b9297;
+    --quiet: #6f767c; /* >= 4.5:1 on the well */
+    --line: rgba(255,255,255,.08);
+    --accent: #1fc6ef; /* the only accent; used once: the indicator line on Next class */
+    --ink: #0c0d0e;
+    --well: #0d0e0f;
+    --card-w: 360px;
+    --card-h: 380px;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; min-height: 100vh; color: var(--text); font-size: 14px; line-height: 1.45; background: var(--bg); overflow-x: hidden; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
+  button:focus-visible, .deck:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 12px; }
+
+  .label { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--quiet); }
+  .meta { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* Stage: matte scene, a soft top light and a faint glow behind the focused card */
+  .stage {
+    position: relative; min-height: 100vh; display: grid; grid-template-rows: 1fr auto auto; padding: 32px 0 112px; isolation: isolate; overflow: hidden;
+    background:
+      radial-gradient(50% 40% at 50% 48%, rgba(238,241,243,.07) 0%, transparent 70%),
+      linear-gradient(180deg, #19191b 0%, var(--bg) 55%);
+  }
+
+  /* Same surfaces as the phone version: raised matte plate for controls, recessed well for information */
+  .plate {
+    border: 1px solid rgba(255,255,255,.07);
+    background: linear-gradient(180deg, #232325, #171718);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 18px 30px -10px rgba(0,0,0,.95);
+  }
+  .well {
+    border-radius: 20px; background: var(--well);
+    box-shadow: inset 0 2px 10px rgba(0,0,0,.75), inset 0 0 0 1px rgba(255,255,255,.04);
+  }
+
+  /* Carousel: focused card in the center, neighbours turned away and dimmed */
+  .deck { position: relative; align-self: center; height: var(--card-h); perspective: 1400px; touch-action: pan-y; user-select: none; }
+  .card {
+    --o: 0; /* offset from the active card, set by script */
+    position: absolute; left: 50%; top: 0; width: min(80vw, var(--card-w)); height: 100%; padding: 24px 24px 20px;
+    display: flex; flex-direction: column;
+    opacity: calc(1 - var(--abs) * .45); z-index: calc(10 - var(--abs));
+    transform: translateX(calc(-50% + var(--o) * 108%)) rotateY(calc(var(--o) * -30deg)) scale(calc(1 - var(--abs) * .1));
+    transition: transform .45s cubic-bezier(.2,.7,.2,1), opacity .45s;
+    cursor: pointer;
+  }
+  .card[data-active] { cursor: default; }
+  .card:not([data-active]) > * { pointer-events: none; filter: grayscale(1); }
+  @media (max-width: 899.98px) { .card { transform: translateX(calc(-50% + var(--o) * 88%)) rotateY(calc(var(--o) * -30deg)) scale(calc(1 - var(--abs) * .1)); } }
+
+  /* One header row for every card: label left, action right */
+  .head { display: flex; justify-content: space-between; align-items: center; min-height: 24px; }
+  .head .meta { padding: 6px 0 6px 12px; margin: -6px 0; transition: color .15s; }
+  .head .meta:hover { color: var(--text); }
+
+  /* 1. Next class: loudest by size and white text, not by a different surface */
+  .hero-body { margin-top: 24px; padding-left: 16px; border-left: 2px solid var(--accent); }
+  .hero-title { font-size: 36px; font-weight: 600; letter-spacing: -.02em; line-height: 1.1; margin: 0; }
+  .hero-time { margin-top: 10px; font-size: 16px; letter-spacing: .04em; }
+  .hero-time span { color: var(--muted); }
+  .later { margin-top: auto; }
+  .later .label { margin-bottom: 4px; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; font-size: 13px; letter-spacing: .03em; color: var(--muted); border-top: 1px dotted rgba(255,255,255,.14); }
+  .row b { color: var(--text); font-weight: 500; }
+
+  /* 2. Needs attention: LED-style unread dots */
+  .item { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 0; border-top: 1px dotted rgba(255,255,255,.14); border-radius: 6px; }
+  .head + .item { border-top: 0; margin-top: 12px; }
+  .item:hover .item-title { color: #fff; }
+  .led { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--text); box-shadow: 0 0 8px rgba(255,255,255,.55); }
+  .item-main { flex: 1; min-width: 0; }
+  .item-title { font-size: 15px; font-weight: 600; letter-spacing: .02em; }
+  .item-sub { font-size: 13px; letter-spacing: .02em; color: var(--muted); margin-top: 2px; }
+  .item-end { font-size: 18px; font-weight: 500; letter-spacing: .04em; }
+
+  /* 3. This week: round matte keys, dots as the only content */
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin: 24px -4px 0; }
+  .day { display: flex; flex-direction: column; align-items: center; color: var(--muted); }
+  .day .dow { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--quiet); }
+  .day .key {
+    margin-top: 10px; width: 40px; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center;
+    font-size: 15px; font-variant-numeric: tabular-nums;
+    background: linear-gradient(180deg, #232325, #171718); border: 1px solid rgba(255,255,255,.06);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 8px 14px -6px rgba(0,0,0,.9);
+  }
+  .day .dots { height: 4px; margin-top: 12px; display: flex; justify-content: center; gap: 3px; }
+  .dots i { width: 4px; height: 4px; border-radius: 50%; background: #3a3e42; }
+  .day.today .dow { color: var(--text); }
+  .day.today .key { color: var(--text); font-weight: 600; background: #070808; box-shadow: inset 0 2px 6px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.5); }
+  .day.today .dots i { background: var(--text); box-shadow: 0 0 5px rgba(255,255,255,.5); }
+
+  /* Switcher under the deck: raised pill, active segment pressed in */
+  .switch { display: flex; gap: 2px; margin: 32px auto 0; padding: 4px; border-radius: 999px; width: max-content; max-width: calc(100% - 32px); }
+  .switch button { min-height: 40px; padding: 0 18px; border-radius: 999px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); white-space: nowrap; transition: color .15s; }
+  .switch button:hover { color: var(--text); }
+  .switch button[aria-selected="true"] { color: var(--text); background: var(--well); box-shadow: inset 0 2px 6px rgba(0,0,0,.8); }
+
+  .hud { display: flex; justify-content: space-between; gap: 16px; width: min(100% - 48px, 980px); margin: 32px auto 0; padding-top: 16px; border-top: 1px dotted rgba(255,255,255,.14); }
+  .hud div:last-child { text-align: right; }
+  .hud .value { font-size: 18px; font-weight: 500; letter-spacing: .04em; margin-top: 2px; }
+
+  /* Bottom bar: raised pill, active tab pressed in */
+  .nav {
+    position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 20;
+    display: flex; gap: 2px; padding: 4px; border-radius: 999px;
+  }
+  .nav button { min-height: 44px; padding: 0 20px; border-radius: 999px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); transition: color .15s; }
+  .nav button:hover { color: var(--text); }
+  .nav button[aria-current="page"] { color: var(--text); background: var(--well); box-shadow: inset 0 2px 6px rgba(0,0,0,.8); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 88px; transform: translateX(-50%); padding: 10px 18px; border-radius: 999px; z-index: 30;
+    background: var(--well); color: var(--text); border: 1px solid var(--line); font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .toast.show { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<main class="stage">
+  <section class="deck" id="deck" aria-roledescription="carousel" aria-label="Today widgets" tabindex="0">
+
+    <!-- 1. Next class -->
+    <article class="card well" data-title="Next class">
+      <div class="head"><span class="label">Next class</span></div>
+      <div class="hero-body">
+        <div class="hero-title">Programming</div>
+        <div class="hero-time num">14:15–15:45 <span>· Room 204</span></div>
+      </div>
+      <div class="later">
+        <div class="label">Later today</div>
+        <div class="row"><b>Mathematics</b><span class="num">16:00 · 108</span></div>
+        <div class="row"><b>Physics lab</b><span class="num">18:00 · 12</span></div>
+      </div>
+    </article>
+
+    <!-- 2. Needs attention -->
+    <article class="card well" data-title="Needs attention">
+      <div class="head"><span class="label">Needs attention</span><button class="meta" data-toast="All changes">All changes →</button></div>
+      <button class="item" data-toast="Room changed · 204 → 108">
+        <span class="led"></span>
+        <span class="item-main"><div class="item-title">Room changed</div><div class="item-sub">Mathematics · 204 → 108</div></span>
+        <span class="meta">Today</span>
+      </button>
+      <button class="item" data-toast="Algorithms · 4.5">
+        <span class="led"></span>
+        <span class="item-main"><div class="item-title">New grade</div><div class="item-sub">Algorithms · Laboratory</div></span>
+        <span class="item-end num">4.5</span>
+      </button>
+    </article>
+
+    <!-- 3. This week -->
+    <article class="card well" data-title="This week">
+      <div class="head"><span class="label">This week · 19–25 Oct</span><button class="meta" data-toast="Full plan">Full plan →</button></div>
+      <div class="days">
+        <div class="day"><div class="dow">Mon</div><div class="key">19</div><div class="dots"><i></i><i></i><i></i></div></div>
+        <div class="day"><div class="dow">Tue</div><div class="key">20</div><div class="dots"><i></i><i></i></div></div>
+        <div class="day"><div class="dow">Wed</div><div class="key">21</div><div class="dots"></div></div>
+        <div class="day"><div class="dow">Thu</div><div class="key">22</div><div class="dots"><i></i><i></i><i></i><i></i></div></div>
+        <div class="day today" aria-current="date"><div class="dow">Fri</div><div class="key">23</div><div class="dots"><i></i><i></i><i></i></div></div>
+        <div class="day"><div class="dow">Sat</div><div class="key">24</div><div class="dots"></div></div>
+        <div class="day"><div class="dow">Sun</div><div class="key">25</div><div class="dots"></div></div>
+      </div>
+    </article>
+
+  </section>
+
+  <div class="switch plate" id="switch" role="tablist" aria-label="Widgets"></div>
+
+  <footer class="hud">
+    <div><div class="label">Time</div><div class="value num" id="clock">--:--</div></div>
+    <div><div class="label">Today</div><div class="value num">Fri 23 Oct</div></div>
+  </footer>
+</main>
+
+<nav class="nav plate" aria-label="Main navigation">
+  <button aria-current="page">Today</button>
+  <button data-toast="Plan">Plan</button>
+  <button data-toast="Grades">Grades</button>
+  <button data-toast="Changes">Changes</button>
+  <button data-toast="More">More</button>
+</nav>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+  const deck = document.getElementById('deck');
+  const cards = [...deck.querySelectorAll('.card')];
+  const sw = document.getElementById('switch');
+  let active = 0;
+
+  const tabs = cards.map((c, i) => {
+    const b = document.createElement('button');
+    b.role = 'tab'; b.textContent = c.dataset.title;
+    b.addEventListener('click', () => go(i));
+    sw.appendChild(b);
+    return b;
+  });
+
+  function go(i) { active = Math.max(0, Math.min(cards.length - 1, i)); render(); }
+  function render() {
+    cards.forEach((c, i) => {
+      const o = i - active;
+      c.style.setProperty('--o', o);
+      c.style.setProperty('--abs', Math.abs(o));
+      c.toggleAttribute('data-active', o === 0);
+      c.setAttribute('aria-hidden', o !== 0);
+      c.querySelectorAll('button').forEach(b => { b.tabIndex = o === 0 ? 0 : -1; });
+      c.setAttribute('aria-label', `${i + 1} of ${cards.length}`);
+    });
+    tabs.forEach((t, i) => t.setAttribute('aria-selected', i === active));
+  }
+
+  // Swipe or drag to flip; a click on a side card brings it to the center
+  let startX = null, dx = 0, dragged = false;
+  deck.addEventListener('pointerdown', e => { startX = e.clientX; dx = 0; dragged = false; });
+  deck.addEventListener('pointermove', e => { if (startX !== null) { dx = e.clientX - startX; if (Math.abs(dx) > 8) dragged = true; } });
+  const end = () => {
+    if (startX === null) return;
+    if (dx < -40) go(active + 1); else if (dx > 40) go(active - 1);
+    startX = null;
+  };
+  deck.addEventListener('pointerup', end);
+  deck.addEventListener('pointercancel', end);
+  deck.addEventListener('click', e => {
+    if (dragged) { e.stopPropagation(); e.preventDefault(); return; }
+    const card = e.target.closest('.card');
+    if (card && !card.hasAttribute('data-active')) go(cards.indexOf(card));
+  }, true);
+  deck.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') go(active + 1);
+    if (e.key === 'ArrowLeft') go(active - 1);
+  });
+  render();
+
+  const toast = document.getElementById('toast');
+  let timer;
+  document.addEventListener('click', e => {
+    const el = e.target.closest('[data-toast]');
+    if (!el) return;
+    toast.textContent = el.dataset.toast;
+    toast.classList.add('show');
+    clearTimeout(timer);
+    timer = setTimeout(() => toast.classList.remove('show'), 1400);
+  });
+
+  const clock = document.getElementById('clock');
+  const tick = () => { clock.textContent = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); };
+  tick();
+  setInterval(tick, 10000);
+</script>
+</body>
+</html>
