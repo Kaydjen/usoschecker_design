@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0c0d0e">
+<title>USOS Checker — Start Prototype</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0c0d0e;
+    --text: #eef1f3;
+    --muted: #8b9297;
+    --quiet: #5c6368;
+    --line: rgba(255,255,255,.09);
+    --accent: #1fc6ef; /* the only accent; used on Next class only */
+    --paper: #f4f5f6;
+    --ink: #0c0d0e;
+    --radius: 6px;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; min-height: 100vh; color: var(--text); font-size: 13px; line-height: 1.45; background: var(--bg); overflow-x: hidden; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
+  button:focus-visible, .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  .label { font-size: 9px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); }
+  .meta { font-size: 11px; letter-spacing: .06em; color: var(--muted); }
+  .num { font-variant-numeric: tabular-nums; }
+  .hair { height: 1px; background: var(--line); margin: 14px 0; }
+
+  /* Stage: matte dark scene with one soft shaft of light behind the focused card */
+  .stage {
+    position: relative; min-height: 100vh; display: grid; grid-template-rows: 1fr auto auto; padding: 24px 0 96px; isolation: isolate; overflow: hidden;
+    background:
+      radial-gradient(60% 45% at 50% 55%, rgba(238,241,243,.12) 0%, transparent 70%),
+      radial-gradient(120% 80% at 50% 0%, #1d1e20 0%, var(--bg) 60%);
+  }
+  .stage::before {
+    content: ""; position: absolute; z-index: -1; left: 50%; top: 10%; bottom: 0; width: min(46vw, 260px); transform: translateX(-50%);
+    background: linear-gradient(180deg, transparent, rgba(238,241,243,.10) 45%, rgba(238,241,243,.03) 100%);
+    filter: blur(18px);
+  }
+
+  /* Carousel: focused card in the center, neighbours turned away and dimmed */
+  .deck { position: relative; align-self: center; height: 400px; perspective: 1200px; touch-action: pan-y; user-select: none; }
+  .card {
+    --o: 0; /* offset from the active card, set by script */
+    position: absolute; left: 50%; top: 0; width: min(78vw, 320px); height: 100%; padding: 22px; border-radius: var(--radius);
+    display: flex; flex-direction: column;
+    background: linear-gradient(160deg, #19191b, #101112); border: 1px solid var(--line);
+    box-shadow: 0 22px 40px -18px rgba(0,0,0,.9);
+    opacity: calc(1 - var(--abs) * .55); z-index: calc(10 - var(--abs));
+    transition: transform .45s cubic-bezier(.2,.7,.2,1), opacity .45s;
+    cursor: pointer;
+  }
+  .card[data-active] { cursor: default; }
+  .card:not([data-active]) > * { pointer-events: none; filter: grayscale(1); }
+  @media (min-width: 900px) { .card { transform: translateX(calc(-50% + var(--o) * 108%)) rotateY(calc(var(--o) * -32deg)) scale(calc(1 - var(--abs) * .1)); } }
+  @media (max-width: 899.98px) { .card { transform: translateX(calc(-50% + var(--o) * 88%)) rotateY(calc(var(--o) * -32deg)) scale(calc(1 - var(--abs) * .1)); } }
+
+  /* 1. Next class */
+  .accent-bar { width: 28px; height: 2px; background: var(--accent); margin-bottom: 14px; }
+  .hero-title { font-size: 30px; font-weight: 600; letter-spacing: -.015em; line-height: 1.12; margin: 8px 0 0; }
+  .hero-time { margin-top: 10px; font-size: 13px; letter-spacing: .04em; }
+  .hero-foot { margin-top: auto; }
+  .row { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; color: var(--muted); padding: 4px 0; }
+  .row b { color: var(--text); font-weight: 500; }
+
+  /* 2. Needs attention */
+  .item { display: flex; align-items: baseline; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); width: 100%; }
+  .item:first-of-type { border-top: 0; padding-top: 14px; }
+  .mark { flex: none; width: 5px; height: 5px; border-radius: 50%; background: var(--text); transform: translateY(-2px); }
+  .item-main { flex: 1; min-width: 0; }
+  .item-title { font-size: 13px; font-weight: 600; }
+  .item-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .item-end { font-size: 15px; font-weight: 500; }
+  .more { margin-top: auto; }
+
+  /* 3. This week */
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); border-top: 1px solid var(--line); margin-top: 14px; }
+  .day { padding: 12px 0 4px; text-align: center; color: var(--muted); border-radius: 4px; }
+  .day .dow { font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+  .day .date { font-size: 15px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .day .dots { height: 6px; margin-top: 8px; display: flex; justify-content: center; gap: 2px; }
+  .dots i { width: 4px; height: 4px; border-radius: 50%; background: var(--quiet); }
+  .day.today { color: var(--text); box-shadow: 0 -1px 0 var(--text); }
+  .day.today .date { font-weight: 600; }
+  .day.today .dots i { background: var(--text); }
+
+  /* Switcher under the deck, words only (like the segmented tabs in the reference) */
+  .switch { display: flex; justify-content: center; gap: 4px; margin: 20px auto 0; padding: 4px; border-radius: 999px; background: rgba(20,21,22,.6); border: 1px solid var(--line); width: max-content; max-width: calc(100% - 32px); }
+  .switch button { padding: 7px 12px; border-radius: 999px; font-size: 11px; color: var(--muted); letter-spacing: .04em; white-space: nowrap; }
+  .switch button[aria-selected="true"] { color: var(--ink); background: var(--paper); }
+
+  .hud { display: flex; justify-content: space-between; gap: 16px; width: min(100% - 32px, 980px); margin: 24px auto 0; padding-top: 14px; border-top: 1px solid var(--line); }
+  .hud div:last-child { text-align: right; }
+  .hud .value { font-size: 18px; font-weight: 500; margin-top: 2px; }
+
+  /* Bottom bar: present, not functional yet */
+  .nav {
+    position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 20;
+    display: flex; gap: 4px; padding: 5px; border-radius: 999px;
+    background: rgba(20,21,22,.82); backdrop-filter: blur(10px); border: 1px solid var(--line);
+  }
+  .nav button { padding: 8px 14px; border-radius: 999px; font-size: 11px; color: var(--muted); letter-spacing: .04em; }
+  .nav button[aria-current="page"] { color: var(--ink); background: var(--paper); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 74px; transform: translateX(-50%); padding: 8px 14px; border-radius: 4px; z-index: 30;
+    background: var(--paper); color: var(--ink); font-size: 11px; opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .toast.show { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<main class="stage">
+  <section class="deck" id="deck" aria-roledescription="carousel" aria-label="Today widgets" tabindex="0">
+
+    <!-- 1. Next class -->
+    <article class="card" data-title="Next class">
+      <div class="accent-bar"></div>
+      <div class="label">Next class</div>
+      <div class="hero-title">Programming</div>
+      <div class="hero-time num">14:15–15:45 · Room 204</div>
+      <div class="hero-foot">
+        <div class="hair" style="margin-top:0"></div>
+        <div class="label" style="margin-bottom:6px">Later today</div>
+        <div class="row"><b>Mathematics</b><span class="num">16:00 · 108</span></div>
+        <div class="row"><b>Physics lab</b><span class="num">18:00 · 12</span></div>
+      </div>
+    </article>
+
+    <!-- 2. Needs attention -->
+    <article class="card" data-title="Needs attention">
+      <div class="label">Needs attention</div>
+      <button class="item" data-toast="Room changed · 204 → 108">
+        <span class="mark"></span>
+        <span class="item-main"><div class="item-title">Room changed</div><div class="item-sub">Mathematics · 204 → 108</div></span>
+        <span class="meta">Today</span>
+      </button>
+      <button class="item" data-toast="Algorithms · 4.5">
+        <span class="mark"></span>
+        <span class="item-main"><div class="item-title">New grade</div><div class="item-sub">Algorithms · Laboratory</div></span>
+        <span class="item-end num">4.5</span>
+      </button>
+      <button class="meta more" data-toast="All changes">All changes →</button>
+    </article>
+
+    <!-- 3. This week -->
+    <article class="card" data-title="This week">
+      <div class="label">This week · 19–25 Oct</div>
+      <div class="days">
+        <div class="day"><div class="dow">Mon</div><div class="date">19</div><div class="dots"><i></i><i></i><i></i></div></div>
+        <div class="day"><div class="dow">Tue</div><div class="date">20</div><div class="dots"><i></i><i></i></div></div>
+        <div class="day"><div class="dow">Wed</div><div class="date">21</div><div class="dots"></div></div>
+        <div class="day"><div class="dow">Thu</div><div class="date">22</div><div class="dots"><i></i><i></i><i></i><i></i></div></div>
+        <div class="day today" aria-current="date"><div class="dow">Fri</div><div class="date">23</div><div class="dots"><i></i><i></i><i></i></div></div>
+        <div class="day"><div class="dow">Sat</div><div class="date">24</div><div class="dots"></div></div>
+        <div class="day"><div class="dow">Sun</div><div class="date">25</div><div class="dots"></div></div>
+      </div>
+      <button class="meta more" data-toast="Full plan">Full plan →</button>
+    </article>
+
+  </section>
+
+  <div class="switch" id="switch" role="tablist" aria-label="Widgets"></div>
+
+  <footer class="hud">
+    <div><div class="label">Time</div><div class="value num" id="clock">--:--</div></div>
+    <div><div class="label">Today</div><div class="value num">Fri 23 Oct</div></div>
+  </footer>
+</main>
+
+<nav class="nav" aria-label="Main navigation">
+  <button aria-current="page">Start</button>
+  <button data-toast="Plan">Plan</button>
+  <button data-toast="Grades">Grades</button>
+  <button data-toast="Changes">Changes</button>
+  <button data-toast="More">More</button>
+</nav>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+  const deck = document.getElementById('deck');
+  const cards = [...deck.querySelectorAll('.card')];
+  const sw = document.getElementById('switch');
+  let active = 0;
+
+  const tabs = cards.map((c, i) => {
+    const b = document.createElement('button');
+    b.role = 'tab'; b.textContent = c.dataset.title;
+    b.addEventListener('click', () => go(i));
+    sw.appendChild(b);
+    return b;
+  });
+
+  function go(i) { active = Math.max(0, Math.min(cards.length - 1, i)); render(); }
+  function render() {
+    cards.forEach((c, i) => {
+      const o = i - active;
+      c.style.setProperty('--o', o);
+      c.style.setProperty('--abs', Math.abs(o));
+      c.toggleAttribute('data-active', o === 0);
+      c.setAttribute('aria-hidden', o !== 0);
+      c.querySelectorAll('button').forEach(b => { b.tabIndex = o === 0 ? 0 : -1; });
+      c.setAttribute('aria-label', `${i + 1} of ${cards.length}`);
+    });
+    tabs.forEach((t, i) => t.setAttribute('aria-selected', i === active));
+  }
+
+  // Swipe or drag to flip; a tap on a side card brings it to the center
+  let startX = null, dx = 0, dragged = false;
+  deck.addEventListener('pointerdown', e => { startX = e.clientX; dx = 0; dragged = false; });
+  deck.addEventListener('pointermove', e => { if (startX !== null) { dx = e.clientX - startX; if (Math.abs(dx) > 8) dragged = true; } });
+  const end = () => {
+    if (startX === null) return;
+    if (dx < -40) go(active + 1); else if (dx > 40) go(active - 1);
+    startX = null;
+  };
+  deck.addEventListener('pointerup', end);
+  deck.addEventListener('pointercancel', end);
+  deck.addEventListener('click', e => {
+    if (dragged) { e.stopPropagation(); e.preventDefault(); return; }
+    const card = e.target.closest('.card');
+    if (card && !card.hasAttribute('data-active')) go(cards.indexOf(card));
+  }, true);
+  deck.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') go(active + 1);
+    if (e.key === 'ArrowLeft') go(active - 1);
+  });
+  render();
+
+  const toast = document.getElementById('toast');
+  let timer;
+  document.addEventListener('click', e => {
+    const el = e.target.closest('[data-toast]');
+    if (!el) return;
+    toast.textContent = el.dataset.toast;
+    toast.classList.add('show');
+    clearTimeout(timer);
+    timer = setTimeout(() => toast.classList.remove('show'), 1400);
+  });
+
+  const clock = document.getElementById('clock');
+  const tick = () => { clock.textContent = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); };
+  tick();
+  setInterval(tick, 10000);
+</script>
+</body>
+</html>
