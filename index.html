@@ -172,7 +172,6 @@
   .floor { grid-area: week; }
 
   .hero { display: flex; flex-direction: column; align-items: center; width: 100%; padding: 32px 0 4px; text-align: center; transition: transform .18s ease; }
-  @media (hover: hover) { .hero:hover { transform: translateY(-2px); } }
   .hero:active { transform: scale(.99); }
   .accent-bar { width: 28px; height: 2px; background: var(--accent-mark); margin-bottom: 14px; }
   .hero-title { font-size: 34px; font-weight: 600; letter-spacing: -.02em; line-height: 1.1; margin: 10px 0 0; }
@@ -798,10 +797,9 @@
     const S_RM = (S_REST + S_FRONT) / 2, A_RM = (A_REST + A_FRONT) / 2;
     function poseFor(t) {
       const fl = Math.max(0, -t), fr = Math.max(0, t), m = Math.abs(t);
-      const mv = state.reduced ? 0 : 1;
-      const sBase = state.reduced ? S_RM : S_REST, aBase = state.reduced ? A_RM : A_REST;
-      const wing = (f, b, sign) => ({ s: sBase + ((S_FRONT - S_REST) * f + (S_BACK - S_REST) * b) * mv, a: sign * (aBase - ((A_REST - A_FRONT) * f - 4 * b) * mv), o: .8 + .2 * f - .45 * b });
-      return { left: wing(fl, fr, 1), right: wing(fr, fl, -1), focus: { s: 1 + (S_CENTRE_BACK - 1) * m * mv, o: 1 - .6 * m } };
+      // Wings and hero always use the reduced-motion pose (fixed size and angle); only opacity still follows the pointer
+      const wing = (f, b, sign) => ({ s: S_RM, a: sign * A_RM, o: .8 + .2 * f - .45 * b });
+      return { left: wing(fl, fr, 1), right: wing(fr, fl, -1), focus: { s: 1, o: 1 - .6 * m } };
     }
     const springs = {};
     for (const [b, pose] of Object.entries(poseFor(0))) for (const [k, v] of Object.entries(pose)) springs[b + '.' + k] = { x: v, v: 0, g: v, t: v };
